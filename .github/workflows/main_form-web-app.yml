@@ -65,4 +65,4 @@ jobs:
           app-name: 'form-web-app'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C5CBC731900C428AB916714876F05F9F }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_FDB7FFEA2B71479C83DCD9C5325F8B0C }}
