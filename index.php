@@ -1,120 +1,64 @@
 <?php
-// Iniciar sesión para mantener los datos entre requests
+// Iniciar sesión
 session_start();
 
-// Inicializar array de mensajes si no existe
-if (!isset($_SESSION['mensajes'])) {
-    $_SESSION['mensajes'] = [];
+// Configuración de conexión (Azure SQL Database)
+$serverName = "tcp:paas-server1.database.windows.net,1433"; // Reemplaza TU_SERVIDOR
+$connectionOptions = array(
+    "Database" => "paas-db",                                // Nombre de tu BD en Azure SQL
+    "Uid" => "azureuser",                         // Usuario SQL (formato completo)
+    "PWD" => "azure123$",                         // Contraseña del usuario
+    "Encrypt" => true,                                       // Cifrado (recomendado en Azure)
+    "TrustServerCertificate" => false                        // No confiar en certificados autofirmados
+);
+
+// Conectar
+$conn = sqlsrv_connect($serverName, $connectionOptions);
+
+if (!$conn) {
+    die("❌ Error al conectar a la base de datos: " . print_r(sqlsrv_errors(), true));
 }
 
-// Guardar nuevo mensaje
+// Insertar mensaje si se envió el formulario
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar"])) {
     $nombre = $_POST["nombre"];
     $correo = $_POST["correo"];
     $mensaje = $_POST["mensaje"];
-    
-    // Crear nuevo mensaje con fecha actual
-    $nuevoMensaje = [
-        'nombre' => $nombre,
-        'correo' => $correo,
-        'mensaje' => $mensaje,
-        'fecha' => date('Y-m-d H:i:s')
-    ];
-    
-    // Agregar al array de mensajes
-    array_unshift($_SESSION['mensajes'], $nuevoMensaje);
-}
+    $fecha = date('Y-m-d H:i:s');
 
-// Obtener nombres únicos para el combo box
-$nombres = [];
-foreach ($_SESSION['mensajes'] as $mensaje) {
-    if (!in_array($mensaje['nombre'], $nombres)) {
-        $nombres[] = $mensaje['nombre'];
-    }
-}
-sort($nombres);
+    $sql = "INSERT INTO mensajes (nombre, correo, mensaje, fecha) VALUES (?, ?, ?, ?)";
+    $params = array($nombre, $correo, $mensaje, $fecha);
 
-// Consultar mensajes filtrados por nombre
-$mensajesFiltrados = [];
-if (isset($_GET['filtro_nombre']) && $_GET['filtro_nombre'] !== '') {
-    $nombreFiltro = $_GET['filtro_nombre'];
-    foreach ($_SESSION['mensajes'] as $mensaje) {
-        if ($mensaje['nombre'] === $nombreFiltro) {
-            $mensajesFiltrados[] = $mensaje;
-        }
+    $stmt = sqlsrv_query($conn, $sql, $params);
+
+    if ($stmt === false) {
+        die("❌ Error al insertar mensaje: " . print_r(sqlsrv_errors(), true));
+    } else {
+        echo "✅ Mensaje enviado correctamente.";
     }
-} else {
-    $mensajesFiltrados = $_SESSION['mensajes'];
 }
 ?>
 
+<!-- Formulario HTML -->
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Formulario con Combo Box</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Formulario de Contacto</title>
 </head>
 <body>
-
-<div class="container">
     <h1>Formulario de Contacto</h1>
+    <form method="POST">
+        <label>Nombre:</label><br>
+        <input type="text" name="nombre" required><br><br>
 
-    <form method="post">
-        <input type="hidden" name="guardar" value="1">
+        <label>Correo:</label><br>
+        <input type="email" name="correo" required><br><br>
 
-        <label>Nombre:</label>
-        <input type="text" name="nombre" required>
+        <label>Mensaje:</label><br>
+        <textarea name="mensaje" rows="5" required></textarea><br><br>
 
-        <label>Correo:</label>
-        <input type="email" name="correo" required>
-
-        <label>Mensaje:</label>
-        <textarea name="mensaje" required></textarea>
-
-        <button type="submit">Enviar</button>
+        <button type="submit" name="guardar">Enviar</button>
     </form>
-
-    <h2>Filtrar Mensajes por Nombre</h2>
-    <form method="get">
-        <label>Selecciona un nombre:</label>
-        <select name="filtro_nombre">
-            <option value="">-- Todos --</option>
-            <?php foreach ($nombres as $n): ?>
-                <option value="<?= htmlspecialchars($n) ?>" <?= (isset($_GET['filtro_nombre']) && $_GET['filtro_nombre'] == $n) ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($n) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit">Consultar</button>
-    </form>
-
-    <?php if (!empty($mensajesFiltrados)): ?>
-        <h3>
-            <?= isset($_GET['filtro_nombre']) && $_GET['filtro_nombre'] !== '' 
-                ? 'Mensajes de: ' . htmlspecialchars($_GET['filtro_nombre']) 
-                : 'Todos los mensajes' ?>
-        </h3>
-        <table>
-            <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Mensaje</th>
-                <th>Fecha</th>
-            </tr>
-            <?php foreach ($mensajesFiltrados as $m): ?>
-                <tr>
-                    <td><?= htmlspecialchars($m['nombre']) ?></td>
-                    <td><?= htmlspecialchars($m['correo']) ?></td>
-                    <td><?= htmlspecialchars($m['mensaje']) ?></td>
-                    <td><?= $m['fecha'] ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php elseif (isset($_GET['filtro_nombre'])): ?>
-        <p>No se encontraron mensajes para este nombre.</p>
-    <?php endif; ?>
-</div>
-
 </body>
 </html>
