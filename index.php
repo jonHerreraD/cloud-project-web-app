@@ -45,6 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar"])) {
 <head>
     <meta charset="UTF-8">
     <title>Formulario de Contacto</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <h1>Formulario de Contacto</h1>
