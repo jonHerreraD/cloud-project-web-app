@@ -3,13 +3,13 @@
 session_start();
 
 // Configuración de conexión (Azure SQL Database)
-$serverName = "tcp:paas-server1.database.windows.net,1433"; // Reemplaza TU_SERVIDOR
+$serverName = "tcp:paas-server1.database.windows.net,1433";
 $connectionOptions = array(
-    "Database" => "paas-db",                                // Nombre de tu BD en Azure SQL
-    "Uid" => "azureuser",                         // Usuario SQL (formato completo)
-    "PWD" => "azure123$",                         // Contraseña del usuario
-    "Encrypt" => true,                                       // Cifrado (recomendado en Azure)
-    "TrustServerCertificate" => false                        // No confiar en certificados autofirmados
+    "Database" => "paas-db",
+    "Uid" => "azureuser",
+    "PWD" => "azure123$",
+    "Encrypt" => true,
+    "TrustServerCertificate" => false
 );
 
 // Conectar
@@ -34,7 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar"])) {
     if ($stmt === false) {
         die("❌ Error al insertar mensaje: " . print_r(sqlsrv_errors(), true));
     } else {
-        echo "✅ Mensaje enviado correctamente.";
+        echo "✅ Mensaje enviado correctamente.<br><br>";
     }
 }
 ?>
@@ -46,6 +46,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar"])) {
     <meta charset="UTF-8">
     <title>Formulario de Contacto</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
 </head>
 <body>
     <h1>Formulario de Contacto</h1>
@@ -61,5 +75,43 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar"])) {
 
         <button type="submit" name="guardar">Enviar</button>
     </form>
+
+    <!-- Mostrar registros guardados -->
+    <h2>Mensajes Registrados</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Mensaje</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            // Consulta de mensajes
+            $query = "SELECT id, nombre, correo, mensaje, fecha FROM mensajes ORDER BY fecha DESC";
+            $result = sqlsrv_query($conn, $query);
+
+            if ($result === false) {
+                echo "<tr><td colspan='5'>❌ Error al obtener mensajes.</td></tr>";
+            } else {
+                while ($row = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+                    echo "<tr>";
+                    echo "<td>" . htmlspecialchars($row["id"]) . "</td>";
+                    echo "<td>" . htmlspecialchars($row["nombre"]) . "</td>";
+                    echo "<td>" . htmlspecialchars($row["correo"]) . "</td>";
+                    echo "<td>" . htmlspecialchars($row["mensaje"]) . "</td>";
+                    echo "<td>" . $row["fecha"]->format('Y-m-d H:i') . "</td>";
+                    echo "</tr>";
+                }
+            }
+
+            // Cerrar conexión
+            sqlsrv_close($conn);
+            ?>
+        </tbody>
+    </table>
 </body>
 </html>
